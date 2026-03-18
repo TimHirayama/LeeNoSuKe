@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+*.pem
+*.json
+!package.json
+!tsconfig.json
+!line-calendar-bot-*.json
+# We should probably ignore the service account json key file anyway for safety:
+line-calendar-bot-*.json
+*.log
+.DS_Store
