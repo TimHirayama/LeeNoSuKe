@@ -51,6 +51,7 @@ app.post(
           if (!userId) return;
 
           const originalText = event.message.text;
+          const isDirectMessage = event.source.type === "user"; // 判斷是否為 1對1 聊天
 
           // 階段一：查詢使用者目前是否有正在進行中的對話
           const activeSession = sessionManager.getSession(userId);
@@ -58,8 +59,9 @@ app.post(
           // 階段二：過濾干擾 (尋找有沒有提到機器的名字)
           const { isMentioned, cleanText } = BotProfile.extractMention(originalText);
 
-          // 【公版核心邏輯】：如果沒有被點名，而且也沒有進行中的對話，直接不理會
-          if (!isMentioned && !activeSession) {
+          // 【公版核心邏輯】：群組防干擾
+          // 只有在「不是私訊」且「沒被 Tag」且「沒有對話進行中」時，才忽略訊息
+          if (!isDirectMessage && !isMentioned && !activeSession) {
             return;
           }
 
@@ -85,10 +87,10 @@ app.post(
                  
               case IntentType.UNKNOWN:
               default:
-                 // 被點名但聽不懂要幹嘛（或者是群組閒聊，但我們現在把機器人限縮住了）
-                 // 我們可以從自動抓到的名字中隨機提供提示
+                 // 被點名但聽不懂要幹嘛
                  const botName = BotProfile.getNames()[0];
-                 replyText = `我聽不懂你在說什麼，目前我只會處理「加入行程」喔！\n(請輸入：@${botName} 加入行程)`;
+                 const hint = isDirectMessage ? "加入行程" : `@${botName} 加入行程`;
+                 replyText = `我聽不懂你在說什麼，目前我只會處理「加入行程」喔！\n(請輸入：${hint})`;
                  break;
             }
           } catch (e) {
