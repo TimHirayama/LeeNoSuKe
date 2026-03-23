@@ -28,6 +28,11 @@ const chatService = new ChatService();
 
 const app = express();
 
+// 加入 ping 路由供外部服務持續喚醒 Render
+app.get("/ping", (req, res) => {
+  res.send("pong");
+});
+
 app.post(
   "/webhook",
   line.middleware(config),
