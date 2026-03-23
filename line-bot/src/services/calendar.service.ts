@@ -2,15 +2,33 @@ import { WebhookEvent } from "@line/bot-sdk";
 import { ServiceHandler } from "../types";
 import { GeminiService } from "./gemini.service";
 import { google } from "googleapis";
+import * as fs from "fs";
+import * as path from "path";
 
 export class CalendarService implements ServiceHandler {
   private calendar: any;
 
   constructor() {
     try {
+      // 決定要讀取的憑證路徑
+      const renderPath = "/etc/secrets/google-key.json";
+      const localPath = path.resolve(process.cwd(), "google-key.json"); // 若在 line-bot 目錄下執行
+      const localAltPath = path.resolve(process.cwd(), "line-bot", "google-key.json"); // 若在專案根目錄執行
+
+      let targetKeyFile = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      if (!targetKeyFile || !fs.existsSync(targetKeyFile)) {
+        if (fs.existsSync(renderPath)) {
+          targetKeyFile = renderPath;
+        } else if (fs.existsSync(localPath)) {
+          targetKeyFile = localPath;
+        } else if (fs.existsSync(localAltPath)) {
+          targetKeyFile = localAltPath;
+        }
+      }
+
       // 載入 Service Account 金鑰並設定權限
       const auth = new google.auth.GoogleAuth({
-        keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+        keyFile: targetKeyFile,
         scopes: ["https://www.googleapis.com/auth/calendar.events"],
       });
       this.calendar = google.calendar({ version: "v3", auth });

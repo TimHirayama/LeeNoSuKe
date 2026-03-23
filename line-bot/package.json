@@ -4,7 +4,8 @@
   "main": "src/index.ts",
   "scripts": {
     "start": "ts-node src/index.ts",
-    "dev": "ts-node-dev src/index.ts"
+    "dev": "ts-node-dev src/index.ts",
+    "build": "tsc"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
