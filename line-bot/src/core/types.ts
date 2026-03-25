@@ -1,7 +1,18 @@
 export enum IntentType {
+  // === 私人助理指令 (Private) ===
   CALENDAR_ADD = "CALENDAR_ADD",
   CALENDAR_UPDATE = "CALENDAR_UPDATE",
   CALENDAR_DELETE = "CALENDAR_DELETE",
+  GENERATE_PASSCODE = "GENERATE_PASSCODE",
+  
+  // === 群組授權指令 (Group) ===
+  ACTIVATE_GROUP_OTP = "ACTIVATE_GROUP_OTP",
+  TRANSLATOR_START = "TRANSLATOR_START",
+  TRANSLATOR_STOP = "TRANSLATOR_STOP",
+  
+  // === 翻譯中狀態 (Intercept) ===
+  TRANSLATING = "TRANSLATING",
+
   UNKNOWN = "UNKNOWN",
 }
 
