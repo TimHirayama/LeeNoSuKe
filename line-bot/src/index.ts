@@ -141,7 +141,7 @@ app.post(
               case IntentType.TRANSLATOR_START:
               case IntentType.TRANSLATOR_START_JP:
                 if (isDirectMessage) {
-                  replyText = "我們現在只有兩個人，直接講話就好啦！(口譯官功能僅限群組使用)";
+                  replyText = "我們現在是一對一，不需要特別開啟群組口譯模式喔！\n你可以直接把你想翻譯的句子丟給我，或是問我日文問題，我會直接幫你解答！🦦";
                   break;
                 }
                 if (!authManager.isGroupAuthorized(groupId!)) {
