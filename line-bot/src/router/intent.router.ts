@@ -16,13 +16,13 @@ export class IntentRouter {
     if (/開始口譯|開始翻譯|啟動口譯/.test(lowerText)) {
       return IntentType.TRANSLATOR_START;
     }
-    if (/通訳開始|翻訳開始|通訳して/.test(lowerText)) {
+    if (/通訳開始|翻訳開始|通訳して|翻訳して/.test(lowerText)) {
       return IntentType.TRANSLATOR_START_JP;
     }
     if (/停止口譯|結束口譯|停止翻譯/.test(lowerText)) {
       return IntentType.TRANSLATOR_STOP;
     }
-    if (/通訳終了|翻訳終了|通訳やめて/.test(lowerText)) {
+    if (/通訳終了|翻訳終了|通訳やめて|翻訳やめて/.test(lowerText)) {
       return IntentType.TRANSLATOR_STOP_JP;
     }
 
