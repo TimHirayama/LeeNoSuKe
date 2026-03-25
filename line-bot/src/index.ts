@@ -163,7 +163,7 @@ app.post(
               // ---------------- 【一般閒聊指令】 ----------------
               case IntentType.UNKNOWN:
               default:
-                replyText = await chatService.handle(cleanText);
+                replyText = await chatService.handle(cleanText, authManager.isAdmin(userId));
                 break;
             }
           }
