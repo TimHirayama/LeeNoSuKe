@@ -9,16 +9,15 @@ import { ChatService } from "./services/chat.service";
 import { sessionManager } from "./core/session.manager";
 import { authManager } from "./core/auth.manager";
 import { BotProfile } from "./core/bot.info";
+import { config } from "./config";
 
-dotenv.config();
-
-const config = {
-  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN!,
-  channelSecret: process.env.LINE_CHANNEL_SECRET!,
+const lineConfig = {
+  channelAccessToken: config.line.channelAccessToken,
+  channelSecret: config.line.channelSecret,
 };
 
 const client = new line.messagingApi.MessagingApiClient({
-  channelAccessToken: config.channelAccessToken,
+  channelAccessToken: lineConfig.channelAccessToken,
 });
 
 BotProfile.init(client);
@@ -34,7 +33,7 @@ app.get("/ping", (req, res) => {
 
 app.post(
   "/webhook",
-  line.middleware(config),
+  line.middleware(lineConfig),
   async (req: express.Request, res: express.Response) => {
     try {
       const events: line.WebhookEvent[] = req.body.events;
@@ -98,6 +97,12 @@ app.post(
               case IntentType.CALENDAR_UPDATE:
               case IntentType.CALENDAR_DELETE:
               case IntentType.GENERATE_PASSCODE:
+                // Feature Flag 攔截
+                if (!config.features.enablePrivateAssistant) {
+                  replyText = "⛔ 本服務器尚未開啟「私人特助與行事曆模組」。";
+                  break;
+                }
+                
                 // 防火牆 1：檢查是否為 1 對 1 私訊
                 if (!isDirectMessage) {
                   replyText = "⚠️ 這是私人助理指令，為了保護主人權益與隱私，我不可以在群組裡執行這個操作喔！";
@@ -120,6 +125,10 @@ app.post(
 
               // ---------------- 【群組功能指令 (需授權才可用)】 ----------------
               case IntentType.ACTIVATE_GROUP_OTP:
+                if (!config.features.enableTranslator) {
+                  replyText = "⛔ 本服務器未啟用群組相關模組，無需進行啟動碼授權。";
+                  break;
+                }
                 if (isDirectMessage) {
                   replyText = "這是一對一私人聊天室，不需要啟動碼授權！直接下達主人指令吧。";
                   break;
@@ -132,7 +141,7 @@ app.post(
                 
                 const isActivated = authManager.verifyOTP(passcode, groupId!);
                 if (isActivated) {
-                  replyText = "✅ 身分驗證成功！本群組已獲得主人授權，可以使用「即時口譯」等群組專屬功能。";
+                  replyText = "✅ 身分驗證成功！本群組已獲得主人授權，可以使用群組專屬功能。";
                 } else {
                   replyText = "❌ 啟動碼錯誤或已過期作廢。";
                 }
@@ -140,6 +149,10 @@ app.post(
 
               case IntentType.TRANSLATOR_START:
               case IntentType.TRANSLATOR_START_JP:
+                if (!config.features.enableTranslator) {
+                  replyText = "⛔ 本服務器尚未購買或啟用「群組即時口譯」模組，如有需求請洽詢系統商。";
+                  break;
+                }
                 if (isDirectMessage) {
                   replyText = "我們現在是一對一，不需要特別開啟群組口譯模式喔！\n你可以直接把你想翻譯的句子丟給我，或是問我日文問題，我會直接幫你解答！🦦";
                   break;
@@ -163,6 +176,14 @@ app.post(
               // ---------------- 【一般閒聊指令】 ----------------
               case IntentType.UNKNOWN:
               default:
+                if (authManager.isAdmin(userId) && !config.features.enablePrivateAssistant) {
+                   replyText = "（身為主人，您尚未替本官方帳號開啟私人聊天模組）";
+                   break;
+                }
+                if (!authManager.isAdmin(userId) && !config.features.enableSpokesperson) {
+                   replyText = "（本官方帳號目前暫不提供自動回覆與發言人功能）";
+                   break;
+                }
                 replyText = await chatService.handle(cleanText, authManager.isAdmin(userId));
                 break;
             }
@@ -183,7 +204,7 @@ app.post(
   }
 );
 
-const port = process.env.PORT || 3000;
+const port = config.server.port;
 app.listen(port, () => {
-  console.log(`LINE Bot listening on port ${port}`);
+  console.log(`LINE Bot SaaS Bootcamp Template listening on port ${port}`);
 });
