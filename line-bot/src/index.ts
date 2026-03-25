@@ -5,6 +5,7 @@ import { IntentRouter } from "./router/intent.router";
 import { IntentType } from "./core/types";
 import { CalendarService } from "./services/calendar.service";
 import { TranslatorService } from "./services/translator.service";
+import { ChatService } from "./services/chat.service";
 import { sessionManager } from "./core/session.manager";
 import { authManager } from "./core/auth.manager";
 import { BotProfile } from "./core/bot.info";
@@ -21,8 +22,10 @@ const client = new line.messagingApi.MessagingApiClient({
 });
 
 BotProfile.init(client);
-
+// 初始化各部門 Service
 const calendarService = new CalendarService();
+const chatService = new ChatService();
+
 const app = express();
 
 app.get("/ping", (req, res) => {
@@ -64,12 +67,14 @@ app.post(
             
             // 檢查是不是要「停止口譯」
             const quickIntent = await IntentRouter.classify(cleanText);
-            if (isMentioned && quickIntent === IntentType.TRANSLATOR_STOP) {
-              sessionManager.clearSession(groupId!);
-              replyText = "🔇 口譯模式已結束。狸之助暫時告退！";
+            if (isMentioned && (quickIntent === IntentType.TRANSLATOR_STOP || quickIntent === IntentType.TRANSLATOR_STOP_JP)) {
+               sessionManager.clearSession(groupId!);
+               replyText = quickIntent === IntentType.TRANSLATOR_STOP_JP ? "📝 通訳を終了します。お疲れ様でした～" : "🔇 翻譯結束囉，狸之助告退！";
             } else {
-              // 把所有文字送去翻譯
-              replyText = await TranslatorService.translate(originalText);
+               // 把所有文字送去翻譯
+               replyText = await TranslatorService.translate(originalText);
+               // 成功翻譯後，自動延長 5 分鐘的 Timeout
+               sessionManager.createOrUpdateSession(groupId!, IntentType.TRANSLATING, "ACTIVE");
             }
           }
           // ========== [情境 B: 正常服務分發模式] ==========
@@ -134,33 +139,31 @@ app.post(
                 break;
 
               case IntentType.TRANSLATOR_START:
+              case IntentType.TRANSLATOR_START_JP:
                 if (isDirectMessage) {
                   replyText = "我們現在只有兩個人，直接講話就好啦！(口譯官功能僅限群組使用)";
                   break;
                 }
                 if (!authManager.isGroupAuthorized(groupId!)) {
-                  replyText = "⛔ 本群組尚未獲得授權，無法開啟口譯功能。\n請請主人私訊我取得「單次啟動碼」，並在這裡輸入。";
+                  replyText = "⛔ 本群組尚未獲得授權，無法開啟口譯功能。\n請主人私訊我取得「單次啟動碼」，並在這裡輸入。";
                   break;
                 }
                 // 開始為這個群組啟動無情口譯狀態
                 sessionManager.createOrUpdateSession(groupId!, IntentType.TRANSLATING, "ACTIVE");
-                const bName = BotProfile.getNames()[0];
-                replyText = `🎙️ 即時口譯官上線！接下來這個群組出現的【每一句日文】我都會翻成中文，【每一句中文】都會翻成日文。\n需要我下班請隨時打字：「@${bName} 停止口譯」。`;
+                replyText = currentIntent === IntentType.TRANSLATOR_START_JP 
+                   ? "🎙️ 通訳を始めますよ～！" 
+                   : "🎙️ 我來翻譯囉～";
                 break;
 
               case IntentType.TRANSLATOR_STOP:
+              case IntentType.TRANSLATOR_STOP_JP:
                 replyText = "雖然我現在沒有在口譯，但也隨時待命！";
                 break;
 
-              // ---------------- 【未知指令】 ----------------
+              // ---------------- 【一般閒聊指令】 ----------------
               case IntentType.UNKNOWN:
               default:
-                const botName = BotProfile.getNames()[0];
-                if (isDirectMessage) {
-                   replyText = "我聽不懂你在說什麼，目前我的私人助理功能只有「給個啟動碼」跟「加入行程」。";
-                } else {
-                   replyText = `我聽不懂你在說什麼，目前群組功能只有「開始口譯」喔！\n(請輸入：@${botName} 開始口譯)`;
-                }
+                replyText = await chatService.handle(cleanText);
                 break;
             }
           }

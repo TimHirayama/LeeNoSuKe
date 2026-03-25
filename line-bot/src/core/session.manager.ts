@@ -2,7 +2,7 @@ import { UserSession, IntentType } from "./types";
 
 export class SessionManager {
   private sessions = new Map<string, UserSession>();
-  private readonly TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes timeout
+  private readonly TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes timeout
 
   getSession(userId: string): UserSession | undefined {
     const session = this.sessions.get(userId);
